@@ -1,0 +1,906 @@
+﻿openapi: 3.0.3
+info:
+  title: Oracle Wallet HTTP API
+  version: 1.0.0
+  description: |
+    Local API for Oracle Wallet manager.
+    Runtime API payloads are JSON:API (application/vnd.api+json),
+    except GET /api/v1/openapi.json which returns application/json.
+
+servers:
+  - url: http://127.0.0.1:8089/api/v1
+    description: Local default endpoint
+
+security:
+  - ApiKeyAuth: []
+  - BasicAuth: []
+
+tags:
+  - name: Meta
+  - name: Health
+  - name: Wallet
+  - name: Certificates
+  - name: ACL
+
+paths:
+  /openapi.json:
+    get:
+      tags: [Meta]
+      summary: Get runtime OpenAPI JSON document
+      operationId: getOpenApiDocument
+      responses:
+        '200':
+          description: OpenAPI JSON document
+          content:
+            application/json:
+              schema:
+                type: object
+        '401':
+          $ref: '#/components/responses/JsonApiErrorResponse'
+        '403':
+          $ref: '#/components/responses/JsonApiErrorResponse'
+        '404':
+          $ref: '#/components/responses/JsonApiErrorResponse'
+
+  /health:
+    get:
+      tags: [Health]
+      summary: Health check
+      operationId: getHealth
+      responses:
+        '200':
+          description: Health resource
+          content:
+            application/vnd.api+json:
+              schema:
+                $ref: '#/components/schemas/HealthResponse'
+        '401':
+          $ref: '#/components/responses/JsonApiErrorResponse'
+        '403':
+          $ref: '#/components/responses/JsonApiErrorResponse'
+
+  /wallets:
+    post:
+      tags: [Wallet]
+      summary: Create a new wallet
+      operationId: createWallet
+      requestBody:
+        required: true
+        content:
+          application/vnd.api+json:
+            schema:
+              $ref: '#/components/schemas/WalletCreateRequestJsonApi'
+          application/json:
+            schema:
+              oneOf:
+                - $ref: '#/components/schemas/WalletCreateRequestLegacy'
+                - $ref: '#/components/schemas/WalletCreateRequestJsonApi'
+      responses:
+        '201':
+          description: Wallet created
+          content:
+            application/vnd.api+json:
+              schema:
+                $ref: '#/components/schemas/WalletCreateResponse'
+        '400':
+          $ref: '#/components/responses/JsonApiErrorResponse'
+        '401':
+          $ref: '#/components/responses/JsonApiErrorResponse'
+        '403':
+          $ref: '#/components/responses/JsonApiErrorResponse'
+        '409':
+          $ref: '#/components/responses/JsonApiErrorResponse'
+        '500':
+          $ref: '#/components/responses/JsonApiErrorResponse'
+
+  /certs:
+    get:
+      tags: [Certificates]
+      summary: List wallet certificates
+      operationId: listCertificates
+      responses:
+        '200':
+          description: Certificate collection
+          content:
+            application/vnd.api+json:
+              schema:
+                $ref: '#/components/schemas/CertificateCollectionResponse'
+        '401':
+          $ref: '#/components/responses/JsonApiErrorResponse'
+        '403':
+          $ref: '#/components/responses/JsonApiErrorResponse'
+        '500':
+          $ref: '#/components/responses/JsonApiErrorResponse'
+
+    post:
+      tags: [Certificates]
+      summary: Download and add certificate by URL
+      operationId: addCertificateByUrl
+      requestBody:
+        required: true
+        content:
+          application/vnd.api+json:
+            schema:
+              $ref: '#/components/schemas/CertificateImportRequestJsonApi'
+          application/json:
+            schema:
+              oneOf:
+                - $ref: '#/components/schemas/CertificateImportRequestLegacy'
+                - $ref: '#/components/schemas/CertificateImportRequestJsonApi'
+      responses:
+        '201':
+          description: Certificate imported
+          content:
+            application/vnd.api+json:
+              schema:
+                $ref: '#/components/schemas/CertificateImportResponse'
+        '400':
+          $ref: '#/components/responses/JsonApiErrorResponse'
+        '401':
+          $ref: '#/components/responses/JsonApiErrorResponse'
+        '403':
+          $ref: '#/components/responses/JsonApiErrorResponse'
+        '500':
+          $ref: '#/components/responses/JsonApiErrorResponse'
+
+  /certs/expiring:
+    get:
+      tags: [Certificates]
+      summary: List certificates expiring in given period
+      operationId: listExpiringCertificates
+      parameters:
+        - in: query
+          name: days
+          required: false
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 3650
+            default: 30
+        - in: query
+          name: limit
+          required: false
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 200
+            default: 20
+      responses:
+        '200':
+          description: Expiring certificate collection
+          content:
+            application/vnd.api+json:
+              schema:
+                $ref: '#/components/schemas/ExpiringCertificatesResponse'
+        '401':
+          $ref: '#/components/responses/JsonApiErrorResponse'
+        '403':
+          $ref: '#/components/responses/JsonApiErrorResponse'
+        '500':
+          $ref: '#/components/responses/JsonApiErrorResponse'
+
+  /certs/{name}:
+    get:
+      tags: [Certificates]
+      summary: Get certificate by thumbprint/name/subject
+      operationId: getCertificate
+      parameters:
+        - in: path
+          name: name
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Certificate resource
+          content:
+            application/vnd.api+json:
+              schema:
+                $ref: '#/components/schemas/CertificateSingleResponse'
+        '401':
+          $ref: '#/components/responses/JsonApiErrorResponse'
+        '403':
+          $ref: '#/components/responses/JsonApiErrorResponse'
+        '404':
+          $ref: '#/components/responses/JsonApiErrorResponse'
+        '500':
+          $ref: '#/components/responses/JsonApiErrorResponse'
+
+    delete:
+      tags: [Certificates]
+      summary: Delete certificate by thumbprint/name/subject
+      operationId: deleteCertificate
+      parameters:
+        - in: path
+          name: name
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Delete operation result
+          content:
+            application/vnd.api+json:
+              schema:
+                $ref: '#/components/schemas/WalletOperationResponse'
+        '401':
+          $ref: '#/components/responses/JsonApiErrorResponse'
+        '403':
+          $ref: '#/components/responses/JsonApiErrorResponse'
+        '404':
+          $ref: '#/components/responses/JsonApiErrorResponse'
+        '500':
+          $ref: '#/components/responses/JsonApiErrorResponse'
+
+  /certs/upload:
+    post:
+      tags: [Certificates]
+      summary: Upload certificate (base64 JSON payload)
+      operationId: uploadCertificate
+      requestBody:
+        required: true
+        content:
+          application/vnd.api+json:
+            schema:
+              $ref: '#/components/schemas/CertificateUploadRequestJsonApi'
+          application/json:
+            schema:
+              oneOf:
+                - $ref: '#/components/schemas/CertificateUploadRequestLegacy'
+                - $ref: '#/components/schemas/CertificateUploadRequestJsonApi'
+      responses:
+        '201':
+          description: Certificate uploaded
+          content:
+            application/vnd.api+json:
+              schema:
+                $ref: '#/components/schemas/CertificateUploadResponse'
+        '400':
+          $ref: '#/components/responses/JsonApiErrorResponse'
+        '401':
+          $ref: '#/components/responses/JsonApiErrorResponse'
+        '403':
+          $ref: '#/components/responses/JsonApiErrorResponse'
+        '500':
+          $ref: '#/components/responses/JsonApiErrorResponse'
+
+  /certs/remove-all:
+    post:
+      tags: [Certificates]
+      summary: Remove all certificates from wallet
+      operationId: removeAllCertificates
+      requestBody:
+        required: true
+        content:
+          application/vnd.api+json:
+            schema:
+              $ref: '#/components/schemas/RemoveAllRequestJsonApi'
+          application/json:
+            schema:
+              oneOf:
+                - $ref: '#/components/schemas/RemoveAllRequestLegacy'
+                - $ref: '#/components/schemas/RemoveAllRequestJsonApi'
+      responses:
+        '200':
+          description: Remove-all operation result
+          content:
+            application/vnd.api+json:
+              schema:
+                $ref: '#/components/schemas/WalletOperationResponse'
+        '400':
+          $ref: '#/components/responses/JsonApiErrorResponse'
+        '401':
+          $ref: '#/components/responses/JsonApiErrorResponse'
+        '403':
+          $ref: '#/components/responses/JsonApiErrorResponse'
+        '500':
+          $ref: '#/components/responses/JsonApiErrorResponse'
+
+  /acl/types:
+    get:
+      tags: [ACL]
+      summary: Get supported ACL types
+      operationId: getAclTypes
+      responses:
+        '200':
+          description: ACL type collection
+          content:
+            application/vnd.api+json:
+              schema:
+                $ref: '#/components/schemas/AclTypeCollectionResponse'
+        '401':
+          $ref: '#/components/responses/JsonApiErrorResponse'
+        '403':
+          $ref: '#/components/responses/JsonApiErrorResponse'
+        '503':
+          $ref: '#/components/responses/JsonApiErrorResponse'
+
+  /acl:
+    get:
+      tags: [ACL]
+      summary: List ACL grants for schema and optional host
+      operationId: listAcl
+      parameters:
+        - in: query
+          name: schema
+          required: true
+          schema:
+            type: string
+        - in: query
+          name: host
+          required: false
+          schema:
+            type: string
+      responses:
+        '200':
+          description: ACL grants collection
+          content:
+            application/vnd.api+json:
+              schema:
+                $ref: '#/components/schemas/AclGrantCollectionResponse'
+        '400':
+          $ref: '#/components/responses/JsonApiErrorResponse'
+        '401':
+          $ref: '#/components/responses/JsonApiErrorResponse'
+        '403':
+          $ref: '#/components/responses/JsonApiErrorResponse'
+        '503':
+          $ref: '#/components/responses/JsonApiErrorResponse'
+
+  /acl/grant:
+    post:
+      tags: [ACL]
+      summary: Grant ACL privilege
+      operationId: grantAcl
+      requestBody:
+        required: true
+        content:
+          application/vnd.api+json:
+            schema:
+              $ref: '#/components/schemas/AclRequestJsonApi'
+          application/json:
+            schema:
+              oneOf:
+                - $ref: '#/components/schemas/AclRequestLegacy'
+                - $ref: '#/components/schemas/AclRequestJsonApi'
+      responses:
+        '200':
+          description: ACL grant operation result
+          content:
+            application/vnd.api+json:
+              schema:
+                $ref: '#/components/schemas/AclOperationResponse'
+        '400':
+          $ref: '#/components/responses/JsonApiErrorResponse'
+        '401':
+          $ref: '#/components/responses/JsonApiErrorResponse'
+        '403':
+          $ref: '#/components/responses/JsonApiErrorResponse'
+        '503':
+          $ref: '#/components/responses/JsonApiErrorResponse'
+
+  /acl/revoke:
+    post:
+      tags: [ACL]
+      summary: Revoke ACL privilege
+      operationId: revokeAcl
+      requestBody:
+        required: true
+        content:
+          application/vnd.api+json:
+            schema:
+              $ref: '#/components/schemas/AclRequestJsonApi'
+          application/json:
+            schema:
+              oneOf:
+                - $ref: '#/components/schemas/AclRequestLegacy'
+                - $ref: '#/components/schemas/AclRequestJsonApi'
+      responses:
+        '200':
+          description: ACL revoke operation result
+          content:
+            application/vnd.api+json:
+              schema:
+                $ref: '#/components/schemas/AclOperationResponse'
+        '400':
+          $ref: '#/components/responses/JsonApiErrorResponse'
+        '401':
+          $ref: '#/components/responses/JsonApiErrorResponse'
+        '403':
+          $ref: '#/components/responses/JsonApiErrorResponse'
+        '503':
+          $ref: '#/components/responses/JsonApiErrorResponse'
+
+components:
+  securitySchemes:
+    ApiKeyAuth:
+      type: apiKey
+      in: header
+      name: X-API-Key
+    BasicAuth:
+      type: http
+      scheme: basic
+
+  responses:
+    JsonApiErrorResponse:
+      description: JSON:API error document
+      content:
+        application/vnd.api+json:
+          schema:
+            $ref: '#/components/schemas/JsonApiErrorDocument'
+
+  schemas:
+    JsonApiVersion:
+      type: object
+      required: [version]
+      properties:
+        version:
+          type: string
+          example: '1.0'
+
+    JsonApiError:
+      type: object
+      required: [status, code, title, detail]
+      properties:
+        status:
+          type: string
+          example: '400'
+        code:
+          type: string
+          example: InvalidBody
+        title:
+          type: string
+          example: InvalidBody
+        detail:
+          type: string
+          example: JSON body required
+
+    JsonApiErrorDocument:
+      type: object
+      required: [jsonapi, errors]
+      properties:
+        jsonapi:
+          $ref: '#/components/schemas/JsonApiVersion'
+        errors:
+          type: array
+          items:
+            $ref: '#/components/schemas/JsonApiError'
+
+    HealthAttributes:
+      type: object
+      properties:
+        time:
+          type: string
+        serverRunning:
+          type: boolean
+        apiEnabled:
+          type: boolean
+        enhancedApiEnabled:
+          type: boolean
+        walletConfigured:
+          type: boolean
+        orapkiAvailable:
+          type: boolean
+        sqlplusAvailable:
+          type: boolean
+
+    HealthResponse:
+      type: object
+      required: [jsonapi, data]
+      properties:
+        jsonapi:
+          $ref: '#/components/schemas/JsonApiVersion'
+        data:
+          type: object
+          required: [type, id, attributes]
+          properties:
+            type:
+              type: string
+              example: health
+            id:
+              type: string
+              example: self
+            attributes:
+              $ref: '#/components/schemas/HealthAttributes'
+
+    WalletCreateAttributes:
+      type: object
+      required: [path, password]
+      properties:
+        path:
+          type: string
+        password:
+          type: string
+        autoLogin:
+          type: boolean
+          default: true
+        autoLoginLocal:
+          type: boolean
+          default: false
+        switchToNew:
+          type: boolean
+          default: true
+
+    WalletCreateRequestJsonApi:
+      type: object
+      required: [data]
+      properties:
+        data:
+          type: object
+          required: [type, attributes]
+          properties:
+            type:
+              type: string
+              enum: [wallets]
+            attributes:
+              $ref: '#/components/schemas/WalletCreateAttributes'
+
+    WalletCreateRequestLegacy:
+      allOf:
+        - $ref: '#/components/schemas/WalletCreateAttributes'
+
+    WalletCreateResponse:
+      type: object
+      required: [jsonapi, data]
+      properties:
+        jsonapi:
+          $ref: '#/components/schemas/JsonApiVersion'
+        data:
+          type: object
+          required: [type, id, attributes]
+          properties:
+            type:
+              type: string
+              example: wallets
+            id:
+              type: string
+              example: C:\\app\\wallet_new
+            attributes:
+              type: object
+              properties:
+                message:
+                  type: string
+                walletPath:
+                  type: string
+                switched:
+                  type: boolean
+
+    CertificateAttributes:
+      type: object
+      properties:
+        name:
+          type: string
+        subject:
+          type: string
+        issuer:
+          type: string
+        notAfter:
+          type: string
+        thumbprint:
+          type: string
+        sourcePath:
+          type: string
+        daysLeft:
+          type: integer
+
+    CertificateResource:
+      type: object
+      required: [type, id, attributes]
+      properties:
+        type:
+          type: string
+          example: certificates
+        id:
+          type: string
+        attributes:
+          $ref: '#/components/schemas/CertificateAttributes'
+
+    CertificateCollectionResponse:
+      type: object
+      required: [jsonapi, data]
+      properties:
+        jsonapi:
+          $ref: '#/components/schemas/JsonApiVersion'
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/CertificateResource'
+
+    CertificateSingleResponse:
+      type: object
+      required: [jsonapi, data]
+      properties:
+        jsonapi:
+          $ref: '#/components/schemas/JsonApiVersion'
+        data:
+          $ref: '#/components/schemas/CertificateResource'
+
+    ExpiringMeta:
+      type: object
+      properties:
+        days:
+          type: integer
+        total:
+          type: integer
+        limit:
+          type: integer
+
+    ExpiringCertificatesResponse:
+      allOf:
+        - $ref: '#/components/schemas/CertificateCollectionResponse'
+        - type: object
+          properties:
+            meta:
+              $ref: '#/components/schemas/ExpiringMeta'
+
+    CertificateImportAttributes:
+      type: object
+      required: [url]
+      properties:
+        url:
+          type: string
+          format: uri
+
+    CertificateImportRequestJsonApi:
+      type: object
+      required: [data]
+      properties:
+        data:
+          type: object
+          required: [type, attributes]
+          properties:
+            type:
+              type: string
+              enum: [certificate-imports]
+            attributes:
+              $ref: '#/components/schemas/CertificateImportAttributes'
+
+    CertificateImportRequestLegacy:
+      $ref: '#/components/schemas/CertificateImportAttributes'
+
+    CertificateImportResponse:
+      type: object
+      required: [jsonapi, data]
+      properties:
+        jsonapi:
+          $ref: '#/components/schemas/JsonApiVersion'
+        data:
+          type: object
+          required: [type, id, attributes]
+          properties:
+            type:
+              type: string
+              example: certificate-imports
+            id:
+              type: string
+            attributes:
+              type: object
+              properties:
+                message:
+                  type: string
+                url:
+                  type: string
+
+    CertificateUploadAttributes:
+      type: object
+      required: [contentBase64]
+      properties:
+        fileName:
+          type: string
+        contentBase64:
+          type: string
+
+    CertificateUploadRequestJsonApi:
+      type: object
+      required: [data]
+      properties:
+        data:
+          type: object
+          required: [type, attributes]
+          properties:
+            type:
+              type: string
+              enum: [certificate-uploads]
+            attributes:
+              $ref: '#/components/schemas/CertificateUploadAttributes'
+
+    CertificateUploadRequestLegacy:
+      $ref: '#/components/schemas/CertificateUploadAttributes'
+
+    CertificateUploadResponse:
+      type: object
+      required: [jsonapi, data]
+      properties:
+        jsonapi:
+          $ref: '#/components/schemas/JsonApiVersion'
+        data:
+          type: object
+          required: [type, id, attributes]
+          properties:
+            type:
+              type: string
+              example: certificate-uploads
+            id:
+              type: string
+            attributes:
+              type: object
+              properties:
+                message:
+                  type: string
+                fileName:
+                  type: string
+
+    WalletOperationAttributes:
+      type: object
+      properties:
+        success:
+          type: boolean
+        removed:
+          type: integer
+        failed:
+          type: integer
+        message:
+          type: string
+        name:
+          type: string
+
+    WalletOperationResponse:
+      type: object
+      required: [jsonapi, data]
+      properties:
+        jsonapi:
+          $ref: '#/components/schemas/JsonApiVersion'
+        data:
+          type: object
+          required: [type, id, attributes]
+          properties:
+            type:
+              type: string
+              example: wallet-operations
+            id:
+              type: string
+            attributes:
+              $ref: '#/components/schemas/WalletOperationAttributes'
+
+    RemoveAllAttributes:
+      type: object
+      required: [confirm]
+      properties:
+        confirm:
+          type: boolean
+
+    RemoveAllRequestJsonApi:
+      type: object
+      required: [data]
+      properties:
+        data:
+          type: object
+          required: [type, attributes]
+          properties:
+            type:
+              type: string
+              enum: [wallet-operations]
+            attributes:
+              $ref: '#/components/schemas/RemoveAllAttributes'
+
+    RemoveAllRequestLegacy:
+      $ref: '#/components/schemas/RemoveAllAttributes'
+
+    AclRequestAttributes:
+      type: object
+      required: [schema, host, port, aclType]
+      properties:
+        schema:
+          type: string
+        host:
+          type: string
+        port:
+          type: integer
+        aclType:
+          type: string
+          enum: [connect, resolve, http]
+
+    AclRequestJsonApi:
+      type: object
+      required: [data]
+      properties:
+        data:
+          type: object
+          required: [type, attributes]
+          properties:
+            type:
+              type: string
+              enum: [acl-requests]
+            attributes:
+              $ref: '#/components/schemas/AclRequestAttributes'
+
+    AclRequestLegacy:
+      $ref: '#/components/schemas/AclRequestAttributes'
+
+    AclTypeCollectionResponse:
+      type: object
+      required: [jsonapi, data]
+      properties:
+        jsonapi:
+          $ref: '#/components/schemas/JsonApiVersion'
+        data:
+          type: array
+          items:
+            type: object
+            required: [type, id, attributes]
+            properties:
+              type:
+                type: string
+                example: acl-types
+              id:
+                type: string
+              attributes:
+                type: object
+                properties:
+                  name:
+                    type: string
+
+    AclGrantCollectionResponse:
+      type: object
+      required: [jsonapi, data]
+      properties:
+        jsonapi:
+          $ref: '#/components/schemas/JsonApiVersion'
+        data:
+          type: array
+          items:
+            type: object
+            required: [type, id, attributes]
+            properties:
+              type:
+                type: string
+                example: acl-grants
+              id:
+                type: string
+              attributes:
+                type: object
+                properties:
+                  host:
+                    type: string
+                  lowerPort:
+                    type: integer
+                  upperPort:
+                    type: integer
+                  principal:
+                    type: string
+                  privilege:
+                    type: string
+                  isGrant:
+                    type: boolean
+
+    AclOperationResponse:
+      type: object
+      required: [jsonapi, data]
+      properties:
+        jsonapi:
+          $ref: '#/components/schemas/JsonApiVersion'
+        data:
+          type: object
+          required: [type, id, attributes]
+          properties:
+            type:
+              type: string
+              example: acl-operations
+            id:
+              type: string
+            attributes:
+              type: object
+              properties:
+                message:
+                  type: string
+                schema:
+                  type: string
+                host:
+                  type: string
+                port:
+                  type: integer
+                aclType:
+                  type: string
+                action:
+                  type: string
+                  enum: [grant, revoke]

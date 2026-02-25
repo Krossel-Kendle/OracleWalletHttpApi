@@ -1,0 +1,11 @@
+# Runtime logs and local config
+logs/
+config/settings.json
+**/logs/*.log
+**/config/settings.json
+
+# Delphi local/build artifacts
+__history/
+*.dcu
+*.identcache
+*.dproj.local
